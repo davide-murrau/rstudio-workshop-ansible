@@ -1,0 +1,67 @@
+---
+# R from Posit binaries (https://docs.posit.co/resources/install-r.html)
+
+- name: Ensure the crb repository is enabled
+  community.general.dnf_config_manager:
+    name: crb
+    state: enabled
+  become: true
+  when: ansible_os_family == "RedHat"
+
+- name: Install EPEL
+  ansible.builtin.dnf:
+    name: epel-release
+    state: present
+  become: true
+  when: ansible_os_family == "RedHat"
+
+# Stale apt index -> versions already removed from the mirror (404 on download)
+- name: Update apt cache
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+  become: true
+  when: ansible_os_family == "Debian"
+
+- name: Install system dependencies for R packages
+  ansible.builtin.package:
+    name: "{{ r_system_deps }}"
+    state: present
+  become: true
+
+- name: Install R from Posit rpm {{ r_version }}
+  ansible.builtin.dnf:
+    name: "{{ r_package_url }}"
+    state: present
+    # Posit rpms are not GPG-signed (downloaded over HTTPS from the Posit CDN)
+    disable_gpg_check: true
+  become: true
+  when: ansible_os_family == "RedHat"
+
+- name: Install R from Posit deb {{ r_version }}
+  ansible.builtin.apt:
+    deb: "{{ r_package_url }}"
+    state: present
+  become: true
+  when: ansible_os_family == "Debian"
+
+- name: Link R and Rscript in /usr/local/bin
+  ansible.builtin.file:
+    src: "{{ r_prefix }}/bin/{{ item }}"
+    dest: "/usr/local/bin/{{ item }}"
+    state: link
+    force: true
+  loop: [R, Rscript]
+  become: true
+  when: r_default_symlinks | bool
+
+# CRAN repo (P3M binaries) and the user agent P3M needs to serve binaries
+# instead of sources: applies to all users of this R version
+- name: Configure site profile (CRAN repo)
+  ansible.builtin.template:
+    src: Rprofile.site.j2
+    dest: "{{ r_prefix }}/lib/R/etc/Rprofile.site"
+    owner: root
+    group: root
+    mode: "0644"
+  become: true

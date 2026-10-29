@@ -1,0 +1,10 @@
+# Credentials of the workshop users (role ipa_workshop_users)
+credentials/
+
+# Site inventories: keep only the example in the repository
+inventory/*
+!inventory/example/
+
+*.retry
+.ansible/
+.DS_Store

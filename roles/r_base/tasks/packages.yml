@@ -1,0 +1,69 @@
+---
+# Packages in the system library (.Library) of R {{ r_version }}.
+# The script installs only the missing packages (it does not upgrade the ones
+# already there) and fails if any of them is still missing at the end.
+
+- name: Create R install scripts directory
+  ansible.builtin.file:
+    path: /usr/local/lib/r-base
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  become: true
+
+- name: Deploy package install script
+  ansible.builtin.template:
+    src: install-packages.R.j2
+    dest: "/usr/local/lib/r-base/install-packages-{{ r_version }}.R"
+    owner: root
+    group: root
+    mode: "0644"
+  become: true
+
+# basilisk environments built with a Python compiled by pyenv in root's home
+# are unusable by users. The package (e.g. MOFA2) is removed so that the
+# script reinstalls it with r_basilisk_python.
+- name: Find basilisk environments built on root's pyenv
+  ansible.builtin.find:
+    paths: "{{ r_prefix }}/lib/R/library"
+    patterns: pyvenv.cfg
+    recurse: true
+    depth: 4
+    contains: '^home = /root/'
+  register: r_basilisk_broken
+  become: true
+
+- name: Remove packages with a broken basilisk environment
+  ansible.builtin.file:
+    # <library>/<package>/basilisk/<env>/pyvenv.cfg -> <library>/<package>
+    path: "{{ item.path | dirname | dirname | dirname }}"
+    state: absent
+  loop: "{{ r_basilisk_broken.files }}"
+  loop_control:
+    label: "{{ item.path | dirname | dirname | dirname }}"
+  become: true
+
+- name: Install R packages (can take a long time on first run)
+  ansible.builtin.shell: >
+    umask 022 &&
+    {{ r_prefix }}/bin/Rscript /usr/local/lib/r-base/install-packages-{{ r_version }}.R
+  # BASILISK_USE_SYSTEM_DIR: MOFA2 creates its Python environment (mofapy2)
+  # inside the system library at install time, not in every user's home.
+  # BASILISK_CUSTOM_PYTHON_<ver>: Python to use (r_basilisk_python);
+  # BASILISK_NO_PYENV: better to fail than to build Python in root's home.
+  # Dictionary built in Jinja: environment keys are not templated
+  environment: >-
+    {{ {'BASILISK_USE_SYSTEM_DIR': '1',
+        'BASILISK_NO_PYENV': '1',
+        'BASILISK_CUSTOM_PYTHON_' ~ (r_basilisk_python_version | replace('.', '_')): r_basilisk_python} }}
+  register: r_install_result
+  changed_when: "'R-BASE-CHANGED' in r_install_result.stdout"
+  async: "{{ r_install_timeout }}"
+  poll: 30
+  become: true
+
+- name: Show installed packages summary
+  ansible.builtin.debug:
+    msg: "{{ r_install_result.stdout_lines | select('match', '^R-BASE-') | list }}"
+  when: r_install_result.stdout_lines is defined

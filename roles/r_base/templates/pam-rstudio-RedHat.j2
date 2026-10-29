@@ -1,0 +1,6 @@
+#%PAM-1.0
+# {{ ansible_managed }}
+# System stack (authselect sssd): directory users + HBAC on the "rstudio" service
+auth       include      password-auth
+account    include      password-auth
+session    include      password-auth

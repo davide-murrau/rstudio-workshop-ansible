@@ -1,0 +1,136 @@
+---
+# r_base defaults
+#
+# System-wide, multi-user R: Posit binaries installed in /opt/R/<version>
+# (pinned version, several versions can coexist) plus CRAN and Bioconductor
+# packages in the system library (.Library), visible to all users.
+# Users can still install their own packages in ~/R.
+
+# Available versions: https://cdn.posit.co/r/versions.json
+r_version: "4.6.1"
+r_prefix: "/opt/R/{{ r_version }}"
+
+# Creates /usr/local/bin/R and /usr/local/bin/Rscript -> this version
+# (the default one for all users). With several versions on the same node,
+# only the one with r_default_symlinks: true should own the symlinks.
+r_default_symlinks: true
+
+# Pinned Bioconductor release: must be compatible with r_version
+# (R 4.6 -> Bioc 3.23). See https://bioconductor.org/about/release-announcements/
+r_bioc_version: "3.23"
+
+# Posit Public Package Manager: CRAN binaries built for the node's distro
+# (no need to compile tidyverse & co. on every node). A date instead of
+# "latest" gives the same packages on all nodes even when they are installed
+# at different times. 2026-09-29 = the CRAN packages of the workshop.
+r_p3m_snapshot: "2026-09-29"
+r_cran_repo: "https://packagemanager.posit.co/cran/__linux__/{{ r_p3m_distro }}/{{ r_p3m_snapshot }}"
+
+# Bioconductor from the dated snapshots of Posit Public Package Manager
+# instead of bioconductor.org, which serves only the latest version of each
+# package. Set in Rprofile.site (BioC_mirror, BIOCONDUCTOR_CONFIG_FILE) for
+# all users. 2026-09-30 = the Bioconductor 3.23 packages of the workshop and
+# mia 1.21.10 from devel 3.24. Empty r_bioc_mirror = bioconductor.org.
+r_bioc_snapshot: "2026-09-30"
+r_bioc_mirror: "https://packagemanager.posit.co/bioconductor/{{ r_bioc_snapshot }}"
+
+# false = only Depends/Imports/LinkingTo (install.packages default);
+# true  = also the Suggests of the requested packages (much longer)
+r_install_suggests: false
+r_install_ncpus: "{{ ansible_processor_vcpus | default(2) }}"
+# Timeout (seconds) of the package installation: Bioconductor packages are compiled
+r_install_timeout: 10800
+
+# Packages requested for the hands-on session of the W4H Symposium
+# (integrated microbiome-metabolome analysis)
+r_cran_packages:
+  - BiocManager
+  - remotes
+  - tidyverse
+  - data.table
+  - corrplot
+  - ggcorrplot
+  - Hmisc
+  - naniar
+  - VIM
+  - mice
+  - FactoMineR
+  - factoextra
+  - missMDA
+  - vegan
+  - psych
+  - compositions
+  - docstring
+  - vtable
+  - gtsummary
+  - ggpubr
+  - ggforce
+  - cowplot
+  - emmeans
+  - coin
+  - broom
+  - reticulate
+
+r_bioc_packages:
+  - ComplexHeatmap
+  - mixOmics
+  - MOFA2
+  - maaslin3
+  - Maaslin2
+  - fgsea
+  - SummarizedExperiment
+  - MultiAssayExperiment
+  - TreeSummarizedExperiment
+  - mia
+
+# Packages to upgrade to the latest Bioconductor devel version: only these
+# come from r_bioc_devel_version, the rest of the library stays on
+# r_bioc_version (BiocManager::install(version = "devel") would move the
+# whole shared library to devel). They are installed from release first
+# (dependencies), then upgraded to the devel version of r_bioc_snapshot
+# (with r_bioc_mirror empty: to the latest devel version, on every run).
+r_bioc_devel_version: "3.24"
+r_bioc_devel_packages:
+  - mia
+
+# Packages from GitHub (remotes::install_github): "user/repo@commit" installs
+# that commit; "user/repo" is reinstalled when the commit on the default
+# branch changes
+r_github_packages:
+  - thomazbastiaanssen/anansi@e03d885046e3144c3b86e669d7a607919256a377
+
+# Python for reticulate (MOFA2 with use_basilisk = FALSE): system venv with
+# mofapy2, set as RETICULATE_PYTHON for all users in Renviron.site (each user
+# can override it in their own ~/.Renviron). The dependencies of mofapy2 are
+# not pinned here: their versions depend on the system Python of the distro
+# (see docs/package-versions.md)
+r_python_venv: /opt/R/venvs/r-reticulate
+r_python_packages:
+  - mofapy2==0.7.5
+r_reticulate_python_default: true
+
+# Python for the basilisk environments (MOFA2): basilisk >= 1.24 creates the
+# environment at install time with the Python version pinned by the package,
+# and if it cannot find it, it builds it with pyenv in root's home (unreadable
+# by users). Instead, Posit Python is installed in /opt/python/<version> and
+# passed to basilisk; pyenv is disabled. The version must match the one pinned
+# by MOFA2 (python=3.12.12 in MOFA2 1.22.x, file R/basilisk.R): if it changes,
+# the installation fails naming the variable to set.
+# Versions: https://cdn.posit.co/python/versions.json
+r_basilisk_python_version: "3.12.12"
+r_basilisk_python: "/opt/python/{{ r_basilisk_python_version }}/bin/python3"
+
+# RStudio Server open source (HTTP only, PAM login -> directory users via sssd).
+# Disabled by default: enable it only on interactive (login) nodes.
+# Versions: https://www.rstudio.com/wp-content/downloads.json
+r_rstudio_server: false
+r_rstudio_version: "2026.09.0-174"
+# Listening on all interfaces: TLS and load balancing are delegated to an
+# external HAProxy (sessions must stick to the same node)
+r_rstudio_address: "0.0.0.0"
+r_rstudio_port: 8787
+# Opens r_rstudio_port in the firewall (firewalld on RedHat, ufw on Ubuntu).
+# Empty list = port open to everyone; otherwise only from these IPs/subnets
+# (e.g. the load balancer)
+r_rstudio_firewall: true
+r_rstudio_firewall_sources: []

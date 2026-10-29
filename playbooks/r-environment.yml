@@ -1,0 +1,57 @@
+---
+# r-environment.yml: multi-user system R with CRAN/Bioconductor packages on
+# the compute and login nodes, RStudio Server on the login nodes only, shared
+# workshop folder (NFS) mounted on all of them (role r_base).
+#
+# R from Posit binaries in /opt/R/<version>, packages in the system library
+# (visible to all users). R and Bioconductor versions and package list in
+# roles/r_base/defaults/main.yml.
+#
+# Usage:
+#   ansible-playbook -i inventory/<site> playbooks/r-environment.yml
+#   ansible-playbook -i inventory/<site> playbooks/r-environment.yml --limit compute-01.example.org
+#
+#   R only (no packages):
+#     ansible-playbook -i inventory/<site> playbooks/r-environment.yml --tags r_install
+#
+#   Packages only:
+#     ansible-playbook -i inventory/<site> playbooks/r-environment.yml --tags r_packages
+#
+#   NFS mount only:
+#     ansible-playbook -i inventory/<site> playbooks/r-environment.yml --tags mount
+#
+#   RStudio Server only (login nodes):
+#     ansible-playbook -i inventory/<site> playbooks/r-environment.yml --limit login --tags r_rstudio
+
+- name: R + packages (compute and login nodes)
+  hosts: compute:login
+  become: true
+  gather_facts: true
+
+  vars:
+    # RStudio Server only on the login nodes (interactive sessions); compute
+    # nodes stay for batch jobs. HTTP on 8787, TLS and load balancing on HAProxy
+    r_rstudio_server: "{{ 'login' in group_names }}"
+
+  # Shared workshop folder (course data + user homes) on compute and login
+  # nodes, so RStudio sessions and batch jobs see it at the same path
+  pre_tasks:
+    - name: Install NFS client
+      ansible.builtin.package:
+        name: "{{ 'nfs-utils' if ansible_os_family == 'RedHat' else 'nfs-common' }}"
+        state: present
+      when: workshop_nfs_src | default('') | length > 0
+      tags: [mount]
+
+    - name: Mount the shared workshop folder
+      ansible.posix.mount:
+        src: "{{ workshop_nfs_src }}"
+        path: "{{ workshop_share_path }}"
+        fstype: nfs4
+        opts: defaults
+        state: mounted
+      when: workshop_nfs_src | default('') | length > 0
+      tags: [mount]
+
+  roles:
+    - role: r_base

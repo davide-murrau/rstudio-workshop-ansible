@@ -1,0 +1,35 @@
+---
+# ipa_workshop_users defaults
+
+# present  = create the users (password, expiration, home, groups)
+# disabled = disable the users that exist (end of the workshop)
+# absent   = delete the users that exist (and the credentials CSV)
+tuser_state: present
+
+# Users <prefix>001 .. <prefix>050 (at least 2)
+tuser_prefix: tuser
+tuser_first: 1
+tuser_last: 50
+# First name of every user; the last name is the user name, so IPA holds no
+# personal data of the participants
+tuser_firstname: Test
+# Home directories <tuser_home_base>/<user>, on the shared folder mounted on
+# all nodes (created at first login by oddjob-mkhomedir)
+tuser_home_base: /mnt/workshop
+
+# Group of the workshop users, with its own password policy (must exist)
+tuser_group: workshop_users
+# Default group of new FreeIPA users: the workshop users are removed from it,
+# so the access rules granted to that group do not apply to them
+tuser_default_group: ipausers
+
+tuser_password_days: 15
+tuser_password_length: 14
+# Users that already exist keep password and expiration, unless this is true
+# (password from the CSV, new expiration)
+tuser_reset_password: false
+
+# Credentials on the control node (mode 0600, never in version control)
+tuser_csv: "{{ playbook_dir | dirname }}/credentials/{{ tuser_group }}.csv"
+# With tuser_state: absent, also delete the CSV
+tuser_remove_csv: true

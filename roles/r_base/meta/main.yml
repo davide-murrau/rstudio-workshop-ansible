@@ -1,0 +1,14 @@
+---
+galaxy_info:
+  role_name: r_base
+  author: Davide Murrau (IRGB-CNR)
+  description: Multi-user system R (Posit binaries in /opt/R) with CRAN/Bioconductor packages and optional RStudio Server
+  license: MIT
+  min_ansible_version: "2.14"
+  platforms:
+    - name: EL
+      versions: ["9"]
+    - name: Ubuntu
+      versions: [jammy, noble]
+
+dependencies: []

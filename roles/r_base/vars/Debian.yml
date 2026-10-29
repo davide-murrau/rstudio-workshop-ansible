@@ -1,0 +1,41 @@
+---
+# Ubuntu 22.04 / 24.04
+
+r_posit_platform: "ubuntu-{{ ansible_distribution_version | replace('.', '') }}"
+r_package_url: "https://cdn.posit.co/r/{{ r_posit_platform }}/pkgs/r-{{ r_version }}_1_amd64.deb"
+r_p3m_distro: "{{ ansible_distribution_release }}"
+r_basilisk_python_url: "https://cdn.posit.co/python/{{ r_posit_platform }}/pkgs/python-{{ r_basilisk_python_version }}_1_amd64.deb"
+# Posit publishes a single .deb (jammy build) that also works on noble
+r_rstudio_url: "https://download2.rstudio.org/server/jammy/amd64/rstudio-server-{{ r_rstudio_version }}-amd64.deb"
+
+# Headers to build packages from source (Bioconductor) and runtime
+# libraries needed by the P3M CRAN binaries
+r_system_deps:
+  - build-essential
+  - gfortran
+  - cmake
+  - git
+  - libcurl4-openssl-dev
+  - libssl-dev
+  - libxml2-dev
+  - libfontconfig1-dev
+  - libfreetype-dev
+  - libharfbuzz-dev
+  - libfribidi-dev
+  - libpng-dev
+  - libtiff-dev
+  - libjpeg-dev
+  - libwebp-dev
+  - libcairo2-dev
+  - libgsl-dev
+  - libglpk-dev
+  - libgmp-dev
+  - zlib1g-dev
+  - libbz2-dev
+  - liblzma-dev
+  - libpcre2-dev
+
+r_python_system_deps:
+  - python3
+  - python3-venv
+  - python3-pip

@@ -1,0 +1,13 @@
+# {{ ansible_managed }}
+{% if r_reticulate_python_default | bool %}
+# reticulate Python (mofapy2 for MOFA2); can be overridden in ~/.Renviron
+RETICULATE_PYTHON={{ r_python_venv }}/bin/python
+{% endif %}
+
+# basilisk (MOFA2): use the Python environments created at install time in
+# the system library. Must be set at runtime too: without it, basilisk
+# ignores the system environment and creates a new one in every user's
+# ~/.cache, building Python with pyenv (slow, and it fails without `patch`)
+BASILISK_USE_SYSTEM_DIR=1
+BASILISK_NO_PYENV=1
+BASILISK_CUSTOM_PYTHON_{{ r_basilisk_python_version | replace('.', '_') }}={{ r_basilisk_python }}

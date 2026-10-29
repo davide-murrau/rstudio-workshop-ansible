@@ -1,0 +1,8 @@
+---
+# r_base handlers
+
+- name: Restart rstudio-server
+  ansible.builtin.systemd_service:
+    name: rstudio-server
+    state: restarted
+  become: true

@@ -1,0 +1,40 @@
+---
+# System Python venv for reticulate (mofapy2 for MOFA2)
+
+- name: Install Python
+  ansible.builtin.package:
+    name: "{{ r_python_system_deps }}"
+    state: present
+  become: true
+
+- name: Install Python packages in the reticulate venv
+  ansible.builtin.pip:
+    name: "{{ r_python_packages }}"
+    virtualenv: "{{ r_python_venv }}"
+    virtualenv_command: python3 -m venv
+  become: true
+
+- name: Install Python for basilisk from Posit rpm {{ r_basilisk_python_version }}
+  ansible.builtin.dnf:
+    name: "{{ r_basilisk_python_url }}"
+    state: present
+    # as for R: rpm downloaded over HTTPS from the Posit CDN, no key imported
+    disable_gpg_check: true
+  become: true
+  when: ansible_os_family == "RedHat"
+
+- name: Install Python for basilisk from Posit deb {{ r_basilisk_python_version }}
+  ansible.builtin.apt:
+    deb: "{{ r_basilisk_python_url }}"
+    state: present
+  become: true
+  when: ansible_os_family == "Debian"
+
+- name: Configure site environment (RETICULATE_PYTHON, basilisk)
+  ansible.builtin.template:
+    src: Renviron.site.j2
+    dest: "{{ r_prefix }}/lib/R/etc/Renviron.site"
+    owner: root
+    group: root
+    mode: "0644"
+  become: true

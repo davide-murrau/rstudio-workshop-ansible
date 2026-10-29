@@ -1,0 +1,39 @@
+---
+# workshop-teardown.yml: end of the workshop, disable the temporary users
+# (role ipa_workshop_users with tuser_state: disabled).
+#
+# Usage (asks for the IPA admin user and password):
+#   ansible-playbook -i inventory/<site> playbooks/workshop-teardown.yml
+#
+#   Delete the users and the credentials CSV (when they are no longer needed):
+#     ... -e tuser_state=absent
+#
+# Not done by this playbook (see README, "After the workshop"): closing the
+# load balancer, restoring the login nodes to their snapshot, removing the
+# home directories from the shared folder.
+
+- name: FreeIPA temporary workshop users, teardown
+  hosts: "{{ workshop_ipa_server | default('ipa_server[0]') }}"
+  become: true
+  gather_facts: false
+
+  vars_prompt:
+    - name: ipaadmin_principal
+      prompt: "IPA admin user"
+      default: "admin"
+      private: false
+    - name: ipaadmin_password
+      prompt: "IPA admin password"
+      private: true
+
+  vars:
+    tuser_state: disabled
+
+  pre_tasks:
+    - name: Check target is an IPA server
+      ansible.builtin.assert:
+        that: inventory_hostname in groups['ipa_server']
+        fail_msg: "{{ inventory_hostname }} is not in the ipa_server group"
+
+  roles:
+    - role: ipa_workshop_users

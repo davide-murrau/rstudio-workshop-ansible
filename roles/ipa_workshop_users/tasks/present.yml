@@ -1,0 +1,187 @@
+---
+# Create or update the workshop users
+#
+# 1. preflight: groups tuser_group and tuser_default_group and the password
+#               policy of tuser_group exist
+# 2. password:  one per user, generated on the control node and saved in
+#               tuser_csv (0600) BEFORE touching IPA: a rerun reuses them
+# 3. users:     created only if missing, with their password and home
+#               <tuser_home_base>/<user> (home also set on existing users);
+#               then the expiration, in a separate task (a password set by
+#               the admin is born expired)
+# 4. groups:    members of tuser_group, removed from tuser_default_group
+# 5. report:    check in IPA (home, groups, expiration) + user/password table
+
+# ---- preflight -------------------------------------------------------------
+- name: Look up groups in IPA
+  ansible.builtin.command: "ipa group-show {{ item }}"
+  loop:
+    - "{{ tuser_group }}"
+    - "{{ tuser_default_group }}"
+  register: tuser_groups_check
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Check groups exist
+  ansible.builtin.assert:
+    that: item.rc == 0
+    fail_msg: "Group {{ item.item }} not found in IPA: {{ item.stderr }}"
+    success_msg: "Group {{ item.item }} found"
+  loop: "{{ tuser_groups_check.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+
+- name: Look up password policy of {{ tuser_group }}
+  ansible.builtin.command: "ipa pwpolicy-show {{ tuser_group }}"
+  register: tuser_pwpolicy
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Check password policy of {{ tuser_group }}
+  ansible.builtin.assert:
+    that: tuser_pwpolicy.rc == 0
+    fail_msg: "No password policy for group {{ tuser_group }}: {{ tuser_pwpolicy.stderr }}"
+    success_msg: "Password policy of {{ tuser_group }} found"
+
+- name: Show password policy of {{ tuser_group }}
+  ansible.builtin.debug:
+    var: tuser_pwpolicy.stdout_lines
+
+# ---- password --------------------------------------------------------------
+- name: Load passwords already generated (CSV)
+  ansible.builtin.set_fact:
+    tuser_saved: >-
+      {{ (lookup('ansible.builtin.file', tuser_csv) if tuser_csv is file else '')
+         | community.general.from_csv | selectattr('password')
+         | items2dict(key_name='user', value_name='password') }}
+  no_log: true
+
+- name: Password per user (from the CSV, generated if missing)
+  ansible.builtin.set_fact:
+    tuser_db: >-
+      {{ tuser_db | default({}) | combine({item: {
+           'name': item,
+           'first': tuser_firstname,
+           'last': item,
+           'homedir': tuser_home_base ~ '/' ~ item,
+           'password': tuser_saved[item] if item in tuser_saved else
+             lookup('community.general.random_string',
+                    length=tuser_password_length | int, special=false,
+                    min_lower=1, min_upper=1, min_numeric=1,
+                    ignore_similar_chars=true, similar_chars='iIl1LoO0') } }) }}
+  loop: "{{ tuser_names }}"
+  no_log: true
+
+- name: Create credentials dir on the control node
+  ansible.builtin.file:
+    path: "{{ tuser_csv | dirname }}"
+    state: directory
+    mode: "0700"
+  delegate_to: localhost
+  become: false
+
+# Written before touching IPA: if the run stops, the passwords already set
+# stay in the CSV and a rerun reuses them
+- name: Write credentials CSV on the control node
+  ansible.builtin.copy:
+    dest: "{{ tuser_csv }}"
+    mode: "0600"
+    content: |
+      user,password,password_expiration
+      {% for u in tuser_names %}
+      {% if u in tuser_setpw %}
+      {{ u }},{{ tuser_db[u].password }},{{ tuser_expiration_h }}
+      {% else %}
+      {% set exp = tuser_before.user[u].passwordexpiration | default('') %}
+      {{ u }},{{ tuser_db[u].password if u in tuser_saved else '' }},{{ (exp ~ ' UTC') if exp else '' }}
+      {% endif %}
+      {% endfor %}
+  delegate_to: localhost
+  become: false
+  no_log: true
+
+- name: Warn about existing users with unknown password
+  ansible.builtin.debug:
+    msg: >-
+      Already in IPA but without a password in the CSV: {{ tuser_unknown | join(', ') }}.
+      To reset them: -e tuser_reset_password=true
+  when: tuser_unknown | length > 0
+
+# ---- users -----------------------------------------------------------------
+- name: Create users with their password
+  freeipa.ansible_freeipa.ipauser:
+    users: "{{ tuser_create | map('extract', tuser_db) | list }}"
+    update_password: on_create
+  when: tuser_create | length > 0
+
+- name: Set home directory of existing users
+  freeipa.ansible_freeipa.ipauser:
+    users: "{{ tuser_existing_homes }}"
+  when: tuser_existing | length > 0
+
+- name: Reset password of existing users
+  freeipa.ansible_freeipa.ipauser:
+    users: "{{ tuser_reset | map('extract', tuser_db) | list }}"
+    update_password: always
+  when: tuser_reset | length > 0
+
+# A password set by the admin expires immediately (forced change at first
+# login) and an expiration passed in the same operation is overwritten: it
+# must be set afterwards, with a separate change
+- name: Set password expiration to {{ tuser_expiration_h }}
+  freeipa.ansible_freeipa.ipauser:
+    users: "{{ tuser_setpw | map('community.general.dict_kv', 'name')
+               | map('combine', {'passwordexpiration': tuser_expiration}) | list }}"
+  when: tuser_setpw | length > 0
+
+# ---- groups ----------------------------------------------------------------
+- name: Add users to {{ tuser_group }}
+  freeipa.ansible_freeipa.ipagroup:
+    name: "{{ tuser_group }}"
+    user: "{{ tuser_names }}"
+    action: member
+
+- name: Remove users from the default group {{ tuser_default_group }}
+  freeipa.ansible_freeipa.ipagroup:
+    name: "{{ tuser_default_group }}"
+    user: "{{ tuser_names }}"
+    action: member
+    state: absent
+
+# ---- report ----------------------------------------------------------------
+- name: Query users after the changes
+  freeipa.ansible_freeipa.ipauser:
+    name: "{{ tuser_names }}"
+    state: query
+    query_param: [homedir, passwordexpiration, memberof_group]
+  register: tuser_after
+
+- name: Report users and passwords
+  ansible.builtin.debug:
+    msg: "{{ tuser_report.rstrip().split('\n') + ['', 'CSV: ' ~ tuser_csv] }}"
+
+- name: Check users in IPA
+  ansible.builtin.assert:
+    that:
+      - tuser_r | length > 0
+      - tuser_r.homedir | default('') == tuser_home_base ~ '/' ~ item
+      - tuser_group in tuser_r_groups
+      - tuser_default_group not in tuser_r_groups
+      - tuser_r_exp | length > 0
+      - item not in tuser_setpw or tuser_r_exp[:12] == tuser_expiration[:12]
+    fail_msg: >-
+      {{ item }}: home={{ tuser_r.homedir | default('-') }}
+      groups={{ tuser_r_groups | join(',') }}
+      expiration={{ tuser_r.passwordexpiration | default('-') }}
+      (expected {{ tuser_expiration_h if item in tuser_setpw else 'unchanged' }})
+    quiet: true
+  vars:
+    tuser_r: "{{ tuser_after.user[item] | default({}) }}"
+    tuser_r_groups: "{{ [tuser_r.memberof_group | default([])] | flatten }}"
+    tuser_r_exp: "{{ tuser_r.passwordexpiration | default('') | regex_replace('[^0-9]', '') }}"
+  loop: "{{ tuser_names }}"
+  loop_control:
+    label: "{{ item }}"
+  when: not ansible_check_mode

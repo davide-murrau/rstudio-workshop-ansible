@@ -1,0 +1,25 @@
+---
+# r_base: entry point
+
+- name: Load distro-specific vars
+  ansible.builtin.include_vars: "{{ item }}"
+  with_first_found:
+    - "{{ ansible_os_family }}.yml"
+  tags: always
+
+- name: Install R
+  ansible.builtin.import_tasks: r.yml
+  tags: [r, r_install]
+
+- name: Python for reticulate
+  ansible.builtin.import_tasks: python.yml
+  tags: [r, r_python]
+
+- name: Install R packages (CRAN + Bioconductor)
+  ansible.builtin.import_tasks: packages.yml
+  tags: [r, r_packages]
+
+- name: Install RStudio Server
+  ansible.builtin.import_tasks: rstudio.yml
+  when: r_rstudio_server | bool
+  tags: [r, r_rstudio]

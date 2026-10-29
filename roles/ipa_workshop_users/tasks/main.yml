@@ -1,0 +1,78 @@
+---
+# ipa_workshop_users: temporary workshop users in FreeIPA, run on an IPA
+# server. Needs ipaadmin_principal and ipaadmin_password (vars_prompt in the
+# playbook).
+#
+# 1. kinit:     admin ticket in a temporary ccache on the IPA server, used by
+#               all the following tasks (ipa commands and ansible-freeipa
+#               modules), destroyed at the end even on failure
+# 2. query:     users that already exist
+# 3. present:   present.yml (create/update); disabled, absent: teardown.yml
+
+- name: Check state and user range
+  ansible.builtin.assert:
+    that:
+      - tuser_state in ['present', 'disabled', 'absent']
+      # with a single name, ipauser state=query does not key the result by name
+      - tuser_names | length > 1
+    fail_msg: "tuser_state must be present, disabled or absent, with at least 2 users"
+
+- name: Fix password expiration date, days from now {{ tuser_password_days }}
+  ansible.builtin.set_fact:
+    tuser_expiration_epoch: "{{ now().timestamp() | int + tuser_password_days | int * 86400 }}"
+  when: tuser_state == 'present'
+
+- name: Create temporary Kerberos ccache dir
+  ansible.builtin.tempfile:
+    state: directory
+    prefix: ipa-tusers-
+  register: tuser_ccache_dir
+  check_mode: false
+
+- name: IPA operations with the admin ticket
+  environment:
+    KRB5CCNAME: "FILE:{{ tuser_ccache_dir.path }}/ccache"
+  block:
+    - name: Kerberos kinit {{ ipaadmin_principal }}
+      ansible.builtin.command: "kinit {{ ipaadmin_principal }}"
+      args:
+        stdin: "{{ ipaadmin_password }}"
+      register: tuser_kinit
+      changed_when: false
+      failed_when: false
+      check_mode: false
+      no_log: true
+
+    - name: Check kinit
+      ansible.builtin.assert:
+        that: tuser_kinit.rc == 0
+        fail_msg: "kinit {{ ipaadmin_principal }} failed: {{ tuser_kinit.stderr | default('') }}"
+        success_msg: "Kerberos ticket obtained for {{ ipaadmin_principal }}"
+
+    - name: Query users before the changes
+      freeipa.ansible_freeipa.ipauser:
+        name: "{{ tuser_names }}"
+        state: query
+        query_param: [passwordexpiration, memberof_group]
+      register: tuser_before
+
+    - name: Create or update users
+      ansible.builtin.import_tasks: present.yml
+      when: tuser_state == 'present'
+
+    - name: Disable or delete users
+      ansible.builtin.import_tasks: teardown.yml
+      when: tuser_state != 'present'
+
+  always:
+    - name: Kerberos kdestroy
+      ansible.builtin.command: kdestroy
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    - name: Remove temporary Kerberos ccache dir
+      ansible.builtin.file:
+        path: "{{ tuser_ccache_dir.path }}"
+        state: absent
+      check_mode: false

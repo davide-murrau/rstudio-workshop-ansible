@@ -1,0 +1,74 @@
+---
+# End of the workshop: disable (tuser_state: disabled) or delete
+# (tuser_state: absent) the workshop users that exist in IPA.
+# The home directories on the shared folder are not touched: remove them on
+# the storage once the users are deleted.
+
+- name: Disable users
+  freeipa.ansible_freeipa.ipauser:
+    name: "{{ tuser_existing }}"
+    state: disabled
+  when:
+    - tuser_state == 'disabled'
+    - tuser_existing | length > 0
+
+- name: Delete users
+  freeipa.ansible_freeipa.ipauser:
+    name: "{{ tuser_existing }}"
+    state: absent
+  when:
+    - tuser_state == 'absent'
+    - tuser_existing | length > 0
+
+- name: Delete credentials CSV on the control node
+  ansible.builtin.file:
+    path: "{{ tuser_csv }}"
+    state: absent
+  delegate_to: localhost
+  become: false
+  when:
+    - tuser_state == 'absent'
+    - tuser_remove_csv | bool
+
+# ---- check -----------------------------------------------------------------
+# rc 1 = no disabled user at all
+- name: List disabled users in IPA
+  ansible.builtin.command: ipa user-find --disabled=true --pkey-only --sizelimit=0
+  register: tuser_disabled
+  changed_when: false
+  failed_when: tuser_disabled.rc not in [0, 1]
+  check_mode: false
+  when: tuser_state == 'disabled'
+
+- name: Check users are disabled
+  ansible.builtin.assert:
+    that: "tuser_disabled.stdout is search('User login: ' ~ item ~ '$', multiline=true)"
+    fail_msg: "{{ item }} is not disabled"
+    quiet: true
+  loop: "{{ tuser_existing }}"
+  when:
+    - tuser_state == 'disabled'
+    - not ansible_check_mode
+
+- name: Query users after the changes
+  freeipa.ansible_freeipa.ipauser:
+    name: "{{ tuser_names }}"
+    state: query
+    query_param: [memberof_group]
+  register: tuser_after
+  when: tuser_state == 'absent'
+
+- name: Check users are deleted
+  ansible.builtin.assert:
+    that: tuser_after.user | default({}) | length == 0
+    fail_msg: "Still in IPA: {{ tuser_after.user | default({}) | list | join(', ') }}"
+  when:
+    - tuser_state == 'absent'
+    - not ansible_check_mode
+
+- name: Report
+  ansible.builtin.debug:
+    msg: >-
+      {{ tuser_existing | length }} users {{ tuser_state }}
+      ({{ tuser_existing | join(', ') if tuser_existing else 'none in IPA' }}).
+      Home directories under {{ tuser_home_base }} not removed.

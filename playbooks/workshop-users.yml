@@ -1,0 +1,39 @@
+---
+# workshop-users.yml: temporary workshop users in FreeIPA
+# (role ipa_workshop_users), run on the first host of the ipa_server group.
+#
+# Usage (asks for the IPA admin user and password):
+#   ansible-playbook -i inventory/<site> playbooks/workshop-users.yml
+#
+#   Against another IPA server:
+#     ... -e workshop_ipa_server=ipa-02.example.org
+#
+#   Users that already exist keep password and expiration. To reset them
+#   (password from the CSV, new expiration):
+#     ... -e tuser_reset_password=true
+#
+# Credentials: credentials/<tuser_group>.csv on the control node (0600,
+# ignored by git). Hand them over to the organizers, then delete the file.
+
+- name: FreeIPA temporary workshop users
+  hosts: "{{ workshop_ipa_server | default('ipa_server[0]') }}"
+  become: true
+  gather_facts: false
+
+  vars_prompt:
+    - name: ipaadmin_principal
+      prompt: "IPA admin user"
+      default: "admin"
+      private: false
+    - name: ipaadmin_password
+      prompt: "IPA admin password"
+      private: true
+
+  pre_tasks:
+    - name: Check target is an IPA server
+      ansible.builtin.assert:
+        that: inventory_hostname in groups['ipa_server']
+        fail_msg: "{{ inventory_hostname }} is not in the ipa_server group"
+
+  roles:
+    - role: ipa_workshop_users

@@ -1,0 +1,42 @@
+---
+# Rocky / Alma 9: Posit R needs EPEL + CRB
+
+r_posit_platform: "rhel-{{ ansible_distribution_major_version }}"
+r_package_url: "https://cdn.posit.co/r/{{ r_posit_platform }}/pkgs/R-{{ r_version }}-1-1.{{ ansible_architecture }}.rpm"
+r_p3m_distro: "rhel{{ ansible_distribution_major_version }}"
+r_basilisk_python_url: "https://cdn.posit.co/python/{{ r_posit_platform }}/pkgs/python-{{ r_basilisk_python_version }}-1-1.{{ ansible_architecture }}.rpm"
+r_rstudio_url: "https://download2.rstudio.org/server/rhel{{ ansible_distribution_major_version }}/x86_64/rstudio-server-rhel-{{ r_rstudio_version }}-x86_64.rpm"
+
+# Headers to build packages from source (Bioconductor) and runtime
+# libraries needed by the P3M CRAN binaries
+r_system_deps:
+  - gcc
+  - gcc-c++
+  - gcc-gfortran
+  - make
+  - cmake
+  - git
+  - libcurl-devel
+  - openssl-devel
+  - libxml2-devel
+  - fontconfig-devel
+  - freetype-devel
+  - harfbuzz-devel
+  - fribidi-devel
+  - libpng-devel
+  - libtiff-devel
+  - libjpeg-turbo-devel
+  - libwebp-devel
+  - cairo-devel
+  - gsl-devel
+  - glpk-devel
+  - gmp-devel
+  - zlib-devel
+  - bzip2-devel
+  - xz-devel
+  - pcre2-devel
+
+# venv is included in python3 on EL9
+r_python_system_deps:
+  - python3
+  - python3-pip

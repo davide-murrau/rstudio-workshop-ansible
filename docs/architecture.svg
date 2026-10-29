@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1040" viewBox="0 0 1600 1040">
+<rect x="0" y="0" width="1600" height="1040" fill="#FFFFFF"/>
+<rect x="560" y="18" width="360" height="78" rx="10" fill="#FFFFFF" stroke="#4B5563" stroke-width="2"/>
+<text x="740" y="50" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="bold" fill="#1F2937" text-anchor="middle">Workshop participants</text>
+<text x="740" y="78" font-family="Arial, Helvetica, sans-serif" font-size="16.5" fill="#374151" text-anchor="middle">web browser, no local software</text>
+<polygon points="740.0,150.0 734.0,135.0 746.0,135.0" fill="#4B5563"/>
+<path d="M740.0,96.0 L740.0,135.0" fill="none" stroke="#4B5563" stroke-width="2.2"/>
+<text x="756" y="129" font-family="Arial, Helvetica, sans-serif" font-size="15.5" fill="#374151" text-anchor="start">HTTPS (TLS)</text>
+<rect x="500" y="152" width="480" height="98" rx="10" fill="#FFF4E5" stroke="#C77700" stroke-width="2.2"/>
+<text x="740" y="184" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="bold" fill="#1F2937" text-anchor="middle">HAProxy load balancer</text>
+<text x="740" y="210" font-family="Arial, Helvetica, sans-serif" font-size="16.5" fill="#374151" text-anchor="middle">terminates TLS towards the users</text>
+<text x="740" y="234" font-family="Arial, Helvetica, sans-serif" font-size="16.5" fill="#374151" text-anchor="middle">sticky sessions with a cookie, 1 hour timeout</text>
+<rect x="30" y="300" width="1060" height="545" rx="14" fill="#F8FAFC" stroke="#7A8899" stroke-width="2" stroke-dasharray="10 7"/>
+<text x="54" y="800" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="bold" fill="#4B5563" text-anchor="start">Virtualization infrastructure of the institute: virtual machines</text>
+<text x="54" y="826" font-family="Arial, Helvetica, sans-serif" font-size="15" fill="#6B7280" text-anchor="start">snapshot before the playbooks; login nodes 1 and 2 restored to it after the workshop</text>
+<polygon points="230.0,388.0 242.3,377.5 246.1,388.9" fill="#4B5563"/>
+<path d="M640.0,250.0 L244.2,383.2" fill="none" stroke="#4B5563" stroke-width="2.2"/>
+<polygon points="560.0,388.0 568.3,374.1 575.6,383.6" fill="#4B5563"/>
+<path d="M740.0,250.0 L571.9,378.9" fill="none" stroke="#4B5563" stroke-width="2.2"/>
+<polygon points="890.0,388.0 879.2,375.9 890.5,371.9" fill="#4B5563"/>
+<path d="M840.0,250.0 L884.9,373.9" fill="none" stroke="#4B5563" stroke-width="2.2" stroke-dasharray="8 6"/>
+<text x="905" y="330" font-family="Arial, Helvetica, sans-serif" font-size="15.5" fill="#374151" text-anchor="start">HTTP, cookie S1 S2 S3</text>
+<rect x="80" y="390" width="300" height="140" rx="10" fill="#EAF1F8" stroke="#2F5D8A" stroke-width="2.2"/>
+<text x="230" y="424" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="bold" fill="#1F2937" text-anchor="middle">Login node 1</text>
+<text x="230" y="452" font-family="Arial, Helvetica, sans-serif" font-size="16.5" fill="#374151" text-anchor="middle">RStudio Server (HTTP)</text>
+<text x="230" y="476" font-family="Arial, Helvetica, sans-serif" font-size="16.5" fill="#374151" text-anchor="middle">R 4.6.1 and packages</text>
+<text x="230" y="510" font-family="Arial, Helvetica, sans-serif" font-size="16.5" fill="#374151" text-anchor="middle">cookie S1</text>
+<rect x="410" y="390" width="300" height="140" rx="10" fill="#EAF1F8" stroke="#2F5D8A" stroke-width="2.2"/>
+<text x="560" y="424" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="bold" fill="#1F2937" text-anchor="middle">Login node 2</text>
+<text x="560" y="452" font-family="Arial, Helvetica, sans-serif" font-size="16.5" fill="#374151" text-anchor="middle">RStudio Server (HTTP)</text>
+<text x="560" y="476" font-family="Arial, Helvetica, sans-serif" font-size="16.5" fill="#374151" text-anchor="middle">R 4.6.1 and packages</text>
+<text x="560" y="510" font-family="Arial, Helvetica, sans-serif" font-size="16.5" fill="#374151" text-anchor="middle">cookie S2</text>
+<rect x="740" y="390" width="300" height="140" rx="10" fill="#F4F7FA" stroke="#2F5D8A" stroke-width="2.2" stroke-dasharray="9 6"/>
+<text x="890" y="424" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="bold" fill="#1F2937" text-anchor="middle">Login node 3 (spare)</text>
+<text x="890" y="452" font-family="Arial, Helvetica, sans-serif" font-size="16.5" fill="#374151" text-anchor="middle">RStudio Server (HTTP)</text>
+<text x="890" y="476" font-family="Arial, Helvetica, sans-serif" font-size="16.5" fill="#374151" text-anchor="middle">R 4.6.1 and packages</text>
+<text x="890" y="510" font-family="Arial, Helvetica, sans-serif" font-size="16.5" fill="#374151" text-anchor="middle">cookie S3</text>
+<text x="560" y="560" font-family="Arial, Helvetica, sans-serif" font-size="15" fill="#6B7280" text-anchor="middle">login nodes with Rocky Linux 9 and AlmaLinux 9</text>
+<rect x="262" y="616" width="620" height="150" rx="10" fill="#EAF1F8" stroke="#2F5D8A" stroke-width="1.6"/>
+<rect x="251" y="605" width="620" height="150" rx="10" fill="#EAF1F8" stroke="#2F5D8A" stroke-width="1.6"/>
+<rect x="240" y="594" width="620" height="150" rx="10" fill="#EAF1F8" stroke="#2F5D8A" stroke-width="2.2"/>
+<text x="550" y="636" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="bold" fill="#1F2937" text-anchor="middle">Compute nodes of the test partition</text>
+<text x="550" y="666" font-family="Arial, Helvetica, sans-serif" font-size="16.5" fill="#374151" text-anchor="middle">R 4.6.1 and the same packages as the login nodes,</text>
+<text x="550" y="690" font-family="Arial, Helvetica, sans-serif" font-size="16.5" fill="#374151" text-anchor="middle">so workshop jobs find the same environment</text>
+<text x="550" y="720" font-family="Arial, Helvetica, sans-serif" font-size="16.5" fill="#374151" text-anchor="middle">no access from outside</text>
+<rect x="1180" y="372" width="390" height="176" rx="10" fill="#EDF7EE" stroke="#2E7D32" stroke-width="2.2"/>
+<text x="1375" y="406" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="bold" fill="#1F2937" text-anchor="middle">FreeIPA (identity management)</text>
+<text x="1375" y="434" font-family="Arial, Helvetica, sans-serif" font-size="16.5" fill="#374151" text-anchor="middle">two servers</text>
+<text x="1375" y="460" font-family="Arial, Helvetica, sans-serif" font-size="16.5" fill="#374151" text-anchor="middle">temporary workshop users</text>
+<text x="1375" y="484" font-family="Arial, Helvetica, sans-serif" font-size="16.5" fill="#374151" text-anchor="middle">in a dedicated group</text>
+<text x="1375" y="510" font-family="Arial, Helvetica, sans-serif" font-size="16.5" fill="#374151" text-anchor="middle">HBAC rule on the rstudio service</text>
+<polygon points="1178.0,460.0 1163.0,466.0 1163.0,454.0" fill="#4B5563"/>
+<path d="M1092.0,460.0 L1163.0,460.0" fill="none" stroke="#4B5563" stroke-width="2.2"/>
+<text x="1134" y="440" font-family="Arial, Helvetica, sans-serif" font-size="15.5" fill="#374151" text-anchor="middle">PAM, sssd</text>
+<rect x="1180" y="600" width="390" height="150" rx="10" fill="#F3EEF8" stroke="#6A4C93" stroke-width="2.2"/>
+<text x="1375" y="634" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="bold" fill="#1F2937" text-anchor="middle">NFS storage</text>
+<text x="1375" y="662" font-family="Arial, Helvetica, sans-serif" font-size="16.5" fill="#374151" text-anchor="middle">shared workshop folder</text>
+<text x="1375" y="688" font-family="Arial, Helvetica, sans-serif" font-size="16.5" fill="#374151" text-anchor="middle">course data and user home directories</text>
+<text x="1375" y="714" font-family="Arial, Helvetica, sans-serif" font-size="16.5" fill="#374151" text-anchor="middle">mounted on all nodes</text>
+<polygon points="1178.0,676.0 1163.0,682.0 1163.0,670.0" fill="#4B5563"/>
+<polygon points="1092.0,676.0 1107.0,670.0 1107.0,682.0" fill="#4B5563"/>
+<path d="M1107.0,676.0 L1163.0,676.0" fill="none" stroke="#4B5563" stroke-width="2.2"/>
+<text x="1134" y="656" font-family="Arial, Helvetica, sans-serif" font-size="15.5" fill="#374151" text-anchor="middle">NFS</text>
+<rect x="300" y="910" width="560" height="104" rx="10" fill="#F5F5F5" stroke="#4B5563" stroke-width="2" stroke-dasharray="8 6"/>
+<text x="580" y="944" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="bold" fill="#1F2937" text-anchor="middle">Ansible roles and playbooks</text>
+<text x="580" y="972" font-family="Arial, Helvetica, sans-serif" font-size="16.5" fill="#374151" text-anchor="middle">this repository</text>
+<text x="580" y="996" font-family="Arial, Helvetica, sans-serif" font-size="16.5" fill="#374151" text-anchor="middle">configure the nodes and create the workshop users</text>
+<polygon points="580.0,847.0 586.0,862.0 574.0,862.0" fill="#4B5563"/>
+<path d="M580.0,908.0 L580.0,862.0" fill="none" stroke="#4B5563" stroke-width="2" stroke-dasharray="7 5"/>
+<polygon points="1572.0,460.0 1587.0,454.0 1587.0,466.0" fill="#4B5563"/>
+<path d="M862.0,962.0 L1588.0,962.0 L1588.0,460.0 L1587.0,460.0" fill="none" stroke="#4B5563" stroke-width="2" stroke-dasharray="7 5"/>
+</svg>

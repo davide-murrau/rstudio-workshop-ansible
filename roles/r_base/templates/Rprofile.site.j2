@@ -1,0 +1,14 @@
+# {{ ansible_managed }}
+local({
+  options(
+    repos = c(CRAN = "{{ r_cran_repo }}"),
+{% if r_bioc_mirror | length > 0 %}
+    # Bioconductor packages and release/devel map from the same snapshot
+    BioC_mirror = "{{ r_bioc_mirror }}",
+    BIOCONDUCTOR_CONFIG_FILE = "{{ r_bioc_mirror }}/config.yaml",
+{% endif %}
+    HTTPUserAgent = sprintf("R/%s R (%s)", getRversion(),
+      paste(getRversion(), R.version["platform"], R.version["arch"], R.version["os"])),
+    Ncpus = {{ r_install_ncpus }}
+  )
+})

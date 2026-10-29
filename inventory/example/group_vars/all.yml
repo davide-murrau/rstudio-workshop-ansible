@@ -1,0 +1,18 @@
+---
+# Shared workshop folder: course data + home directories of the workshop
+# users, mounted on all compute and login nodes. Empty workshop_nfs_src = no mount
+workshop_nfs_src: "nas.example.org:/export/workshop"
+workshop_share_path: /mnt/workshop
+
+# R environment (role r_base): see roles/r_base/defaults/main.yml, where the
+# package versions are pinned to the workshop (r_p3m_snapshot, r_bioc_snapshot)
+# RStudio port reachable only from the load balancer
+r_rstudio_firewall_sources:
+  - 192.0.2.10
+
+# Workshop users (role ipa_workshop_users): see roles/ipa_workshop_users/defaults/main.yml
+tuser_first: 1
+tuser_last: 50
+tuser_group: workshop_users
+tuser_default_group: ipausers
+tuser_home_base: "{{ workshop_share_path }}"

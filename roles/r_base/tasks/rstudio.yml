@@ -1,0 +1,125 @@
+---
+# RStudio Server open source, sessions with the R in /opt/R/<r_version>
+
+- name: Install RStudio Server from Posit rpm {{ r_rstudio_version }}
+  ansible.builtin.dnf:
+    name: "{{ r_rstudio_url }}"
+    state: present
+    # as for R: rpm downloaded over HTTPS from the Posit CDN, no key imported
+    disable_gpg_check: true
+  become: true
+  when: ansible_os_family == "RedHat"
+
+- name: Install RStudio Server from Posit deb {{ r_rstudio_version }}
+  ansible.builtin.apt:
+    deb: "{{ r_rstudio_url }}"
+    state: present
+  become: true
+  when: ansible_os_family == "Debian"
+
+- name: Configure RStudio Server
+  ansible.builtin.template:
+    src: rserver.conf.j2
+    dest: /etc/rstudio/rserver.conf
+    owner: root
+    group: root
+    mode: "0644"
+  become: true
+  notify: Restart rstudio-server
+
+# The package installs /etc/pam.d/rstudio with pam_unix only (local users):
+# directory (FreeIPA) users are rejected and HBAC (service "rstudio") is never
+# evaluated. The system PAM stack is used instead (sssd, set up by the
+# FreeIPA client enrollment)
+- name: Configure RStudio PAM service (system stack, sssd/HBAC)
+  ansible.builtin.template:
+    src: "pam-rstudio-{{ ansible_os_family }}.j2"
+    dest: /etc/pam.d/rstudio
+    owner: root
+    group: root
+    mode: "0644"
+  become: true
+
+# SELinux (RHEL): the binaries in /usr/lib/rstudio-server/bin are labeled
+# lib_t, so systemd does not transition to unconfined_service_t and rserver
+# stays in init_t, which lacks setpgid: every rsession exits immediately
+# ("Unable to connect to service", AVC setpgid in audit.log).
+# Labeled bin_t, rserver runs as unconfined_service_t.
+- name: Install SELinux management tools
+  ansible.builtin.dnf:
+    name: policycoreutils-python-utils
+    state: present
+  become: true
+  when:
+    - ansible_os_family == "RedHat"
+    - ansible_selinux.status | default('disabled') == "enabled"
+
+- name: Label RStudio Server binaries as bin_t
+  community.general.sefcontext:
+    target: "/usr/lib/rstudio-server/bin(/.*)?"
+    setype: bin_t
+    state: present
+  register: r_rstudio_sefcontext
+  become: true
+  when:
+    - ansible_os_family == "RedHat"
+    - ansible_selinux.status | default('disabled') == "enabled"
+
+- name: Apply SELinux labels to RStudio Server binaries
+  ansible.builtin.command: restorecon -R -v /usr/lib/rstudio-server/bin
+  register: r_rstudio_restorecon
+  changed_when: r_rstudio_restorecon.stdout | length > 0
+  notify: Restart rstudio-server
+  become: true
+  when:
+    - ansible_os_family == "RedHat"
+    - ansible_selinux.status | default('disabled') == "enabled"
+
+- name: Enable and start RStudio Server
+  ansible.builtin.systemd_service:
+    name: rstudio-server
+    enabled: true
+    state: started
+  become: true
+
+# Firewall: port open to everyone if r_rstudio_firewall_sources is empty,
+# otherwise only from the listed IPs/subnets (e.g. the load balancer)
+- name: Open RStudio port (firewalld)
+  ansible.posix.firewalld:
+    port: "{{ r_rstudio_port }}/tcp"
+    permanent: true
+    immediate: true
+    zone: public
+    state: enabled
+  become: true
+  when:
+    - r_rstudio_firewall | bool
+    - ansible_os_family == "RedHat"
+    - r_rstudio_firewall_sources | length == 0
+
+- name: Open RStudio port to allowed sources (firewalld)
+  ansible.posix.firewalld:
+    rich_rule: >-
+      rule family="ipv4" source address="{{ item }}"
+      port port="{{ r_rstudio_port }}" protocol="tcp" accept
+    permanent: true
+    immediate: true
+    zone: public
+    state: enabled
+  loop: "{{ r_rstudio_firewall_sources }}"
+  become: true
+  when:
+    - r_rstudio_firewall | bool
+    - ansible_os_family == "RedHat"
+
+- name: Open RStudio port (ufw)
+  community.general.ufw:
+    rule: allow
+    port: "{{ r_rstudio_port }}"
+    proto: tcp
+    src: "{{ item }}"
+  loop: "{{ r_rstudio_firewall_sources if r_rstudio_firewall_sources | length > 0 else ['any'] }}"
+  become: true
+  when:
+    - r_rstudio_firewall | bool
+    - ansible_os_family == "Debian"

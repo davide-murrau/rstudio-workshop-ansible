@@ -1,0 +1,73 @@
+# {{ ansible_managed }}
+# Installs the missing CRAN + Bioconductor {{ r_bioc_version }} packages in the
+# system library, upgrades the requested ones to Bioconductor devel and
+# installs the ones from GitHub. CRAN repo from Rprofile.site.
+
+lib <- .Library
+bioc_version <- "{{ r_bioc_version }}"
+dependencies <- {{ 'TRUE' if r_install_suggests | bool else 'NA' }}
+
+cran_pkgs <- as.character(c({{ r_cran_packages | map('to_json') | join(', ') }}))
+bioc_pkgs <- as.character(c({{ r_bioc_packages | map('to_json') | join(', ') }}))
+bioc_devel_version <- "{{ r_bioc_devel_version }}"
+bioc_devel_pkgs <- as.character(c({{ r_bioc_devel_packages | map('to_json') | join(', ') }}))
+github_repos <- as.character(c({{ r_github_packages | map('to_json') | join(', ') }}))
+# "user/repo@commit" -> "repo"
+github_pkg <- function(repo) sub("@.*$", "", basename(repo))
+release_wanted <- unique(c(cran_pkgs, bioc_pkgs))
+wanted <- unique(c(release_wanted, bioc_devel_pkgs, github_pkg(github_repos)))
+
+installed <- function() rownames(installed.packages(lib.loc = lib))
+
+## --- CRAN + Bioconductor release ------------------------------------------
+missing <- setdiff(release_wanted, installed())
+if (length(missing)) {
+  if (!"BiocManager" %in% installed())
+    install.packages("BiocManager", lib = lib)
+  missing <- setdiff(missing, "BiocManager")
+  # BiocManager also installs the CRAN packages (CRAN repo from Rprofile.site)
+  BiocManager::install(missing, version = bioc_version, lib = lib,
+                       dependencies = dependencies, update = FALSE, ask = FALSE)
+  cat("R-BASE-CHANGED\n")
+}
+
+## --- Bioconductor devel (only the listed packages) -------------------------
+if (length(bioc_devel_pkgs)) {
+  devel_repos <- BiocManager::repositories(version = bioc_devel_version)
+  avail <- available.packages(repos = devel_repos)
+  for (p in bioc_devel_pkgs) {
+    if (!p %in% rownames(avail)) {
+      cat("R-BASE-FAILED: ", p, " not found in Bioconductor ", bioc_devel_version, "\n", sep = "")
+      quit(status = 1)
+    }
+    cur <- if (p %in% installed()) packageVersion(p, lib.loc = lib) else package_version("0")
+    if (cur < package_version(avail[p, "Version"])) {
+      install.packages(p, repos = devel_repos, lib = lib, dependencies = dependencies)
+      cat("R-BASE-CHANGED\n")
+    }
+  }
+}
+
+## --- GitHub -----------------------------------------------------------------
+remote_sha <- function(p)
+  if (p %in% installed()) packageDescription(p, lib.loc = lib)$RemoteSha else NA
+for (repo in github_repos) {
+  p <- github_pkg(repo)
+  before <- remote_sha(p)
+  # missing dependencies come from CRAN + Bioconductor release;
+  # remotes skips the installation if the commit has not changed
+  remotes::install_github(repo, lib = lib, upgrade = "never",
+                          dependencies = dependencies,
+                          repos = BiocManager::repositories(version = bioc_version))
+  if (!identical(before, remote_sha(p))) cat("R-BASE-CHANGED\n")
+}
+
+still_missing <- setdiff(wanted, installed())
+if (length(still_missing)) {
+  cat("R-BASE-FAILED:", still_missing, "\n")
+  quit(status = 1)
+}
+cat("R-BASE-OK:", length(wanted), "packages installed, R", as.character(getRversion()),
+    "Bioc", as.character(BiocManager::version()), "\n")
+for (p in c(bioc_devel_pkgs, github_pkg(github_repos)))
+  cat("R-BASE-OK: ", p, " ", as.character(packageVersion(p, lib.loc = lib)), "\n", sep = "")

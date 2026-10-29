@@ -1,0 +1,34 @@
+---
+# ipa_workshop_users: computed values, not meant to be overridden
+
+tuser_names: "{{ query('ansible.builtin.sequence',
+                 'start=' ~ tuser_first ~ ' end=' ~ tuser_last ~ ' format=' ~ tuser_prefix ~ '%03d') }}"
+
+# tuser_expiration_epoch is fixed with set_fact at the start of the role
+tuser_expiration: "{{ '%Y%m%d%H%M%SZ' | strftime(tuser_expiration_epoch, utc=true) }}"
+tuser_expiration_h: "{{ '%Y-%m-%d %H:%M:%S UTC' | strftime(tuser_expiration_epoch, utc=true) }}"
+
+# State in IPA before the changes (task "Query users before the changes")
+tuser_existing: "{{ tuser_before.user | default({}) | list }}"
+tuser_create: "{{ tuser_names | reject('in', tuser_existing) | list }}"
+tuser_reset: "{{ tuser_existing if tuser_reset_password | bool else [] }}"
+# Users whose password and expiration are set by this run
+tuser_setpw: "{{ tuser_create + tuser_reset }}"
+# Already in IPA, password neither in the CSV nor reset: unknown
+tuser_unknown: "{{ tuser_existing | reject('in', tuser_setpw) | reject('in', tuser_saved) | list }}"
+# [{name, homedir}] of the users that already exist (without password)
+tuser_existing_homes: "{{ tuser_existing | map('community.general.dict_kv', 'name')
+                          | zip(tuser_existing | map('regex_replace', '^', tuser_home_base ~ '/')
+                                | map('community.general.dict_kv', 'homedir'))
+                          | map('combine') | list }}"
+
+tuser_report: |-
+  {{ '%-10s  %-16s  %-24s  %-24s  %s' | format('user', 'password', 'password expiration', 'home', 'groups') }}
+  {% for u in tuser_names %}
+  {% set r = tuser_after.user[u] | default({}) %}
+  {{ '%-10s  %-16s  %-24s  %-24s  %s' | format(u,
+       tuser_db[u].password if u not in tuser_unknown else '(unknown)',
+       (r.passwordexpiration ~ ' UTC') if r.passwordexpiration is defined else '-',
+       r.homedir | default('-'),
+       [r.memberof_group | default([])] | flatten | join(',')) }}
+  {% endfor %}

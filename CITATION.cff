@@ -1,0 +1,28 @@
+cff-version: 1.2.0
+message: "If you use this repository, please cite it as below."
+title: "R and RStudio Server for a hands-on workshop on an HPC cluster"
+type: software
+authors:
+  - family-names: Murrau
+    given-names: Davide
+    affiliation: "Istituto di Ricerca Genetica e Biomedica, Consiglio Nazionale delle Ricerche (IRGB-CNR)"
+version: 1.0.0
+license: MIT
+keywords:
+  - ansible
+  - R
+  - RStudio Server
+  - Bioconductor
+  - HPC
+  - FreeIPA
+  - workshop
+references:
+  - type: report
+    title: "Ambiente R e RStudio Server per il W4H Symposium"
+    authors:
+      - family-names: Murrau
+        given-names: Davide
+    institution:
+      name: "Istituto di Ricerca Genetica e Biomedica, Consiglio Nazionale delle Ricerche (IRGB-CNR)"
+    number: IRGB-ERT-2026-008
+    year: 2026

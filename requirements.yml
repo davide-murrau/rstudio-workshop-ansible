@@ -1,0 +1,12 @@
+---
+# Collections, pinned to the versions the playbooks were run with
+collections:
+  # firewalld, mount
+  - name: ansible.posix
+    version: "2.2.2"
+  # dnf_config_manager, sefcontext, ufw, dict_kv, from_csv, random_string
+  - name: community.general
+    version: "13.3.0"
+  # ipauser, ipagroup (role ipa_workshop_users)
+  - name: freeipa.ansible_freeipa
+    version: "1.17.0"
